@@ -4,9 +4,13 @@ class AttendanceController {
     static async getClasses(req, res) {
         try {
             const classes = await AttendanceModel.getClasses();
+            if (!classes || classes.length === 0) {
+                return res.status(404).json({ error: 'No classes found' });
+            }
             res.json(classes);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            console.error('Error in getClasses:', error);
+            res.status(500).json({ error: 'Failed to fetch classes' });
         }
     }
 

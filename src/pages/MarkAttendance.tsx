@@ -103,33 +103,20 @@ const MarkAttendance = () => {
       return;
     }
 
-    if (attendanceData.length === 0) {
-      toast({
-        title: "No Students",
-        description: "There are no students in this class",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsSubmitting(true);
-
     try {
-      const payload = {
-        class_id: parseInt(selectedClass),
+      const records = attendanceData.map(student => ({
+        studentId: student.id,
         date: attendanceDate,
-        attendance: attendanceData.map(student => ({
-          student_id: student.id,
-          status: student.isPresent ? "Present" : "Absent"
-        }))
-      };
+        status: student.isPresent ? 'Present' : 'Absent'
+      }));
 
       const response = await fetch(`${API_URL}/api/attendance/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(records)
       });
 
       if (!response.ok) {
@@ -138,15 +125,16 @@ const MarkAttendance = () => {
 
       toast({
         title: "Success",
-        description: "Attendance has been recorded successfully",
+        description: "Attendance submitted successfully"
       });
 
-      navigate("/");
+      // Navigate to absentee report with query parameters
+      navigate(`/absentee-report?classId=${selectedClass}&date=${attendanceDate}`);
     } catch (error) {
-      console.error("Error submitting attendance:", error);
+      console.error('Error submitting attendance:', error);
       toast({
         title: "Error",
-        description: "Failed to submit attendance data. Please try again.",
+        description: "Failed to submit attendance. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -154,10 +142,35 @@ const MarkAttendance = () => {
     }
   };
 
-  const handleMarkAll = (status: boolean) => {
+  const handleMarkAll = (present: boolean) => {
     setAttendanceData(prev =>
-      prev.map(student => ({ ...student, isPresent: status }))
+      prev.map(student => ({
+        ...student,
+        isPresent: present
+      }))
     );
+  };
+
+  // Add these buttons in the JSX before the student list
+  <div className="flex gap-4 mb-4">
+    <Button onClick={() => handleMarkAll(true)} variant="outline">
+      Mark All Present
+    </Button>
+    <Button onClick={() => handleMarkAll(false)} variant="outline">
+      Mark All Absent
+    </Button>
+  </div>
+
+  const handleViewAbsenteeReport = () => {
+    if (!selectedClass || !attendanceDate) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a class and date",
+        variant: "destructive"
+      });
+      return;
+    }
+    navigate(`/absentee-report?classId=${selectedClass}&date=${attendanceDate}`);
   };
 
   return (
@@ -165,9 +178,23 @@ const MarkAttendance = () => {
       <header className="bg-primary text-white p-6 shadow-md">
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-3xl font-bold">Mark Attendance</h1>
-          <Button variant="outline" onClick={() => navigate("/")} className="text-white border-white hover:text-primary hover:bg-white">
-            Back to Dashboard
-          </Button>
+          <div className="flex gap-4">
+            <Button 
+              variant="outline" 
+              onClick={handleViewAbsenteeReport} 
+              className="text-white border-white hover:text-primary hover:bg-white"
+              disabled={!selectedClass || !attendanceDate || isSubmitting}
+            >
+              View Absentee Report
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/")} 
+              className="text-white border-white hover:text-primary hover:bg-white"
+            >
+              Back to Dashboard
+            </Button>
+          </div>
         </div>
       </header>
 

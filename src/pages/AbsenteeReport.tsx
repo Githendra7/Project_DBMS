@@ -8,13 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { API_URL } from "@/config/constants";
 import { Class, AbsenteeRecord } from "@/types/types";
+import { useSearchParams } from 'react-router-dom';
+import { useToast } from "@/components/ui/use-toast";
 
 const AbsenteeReport = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [classes, setClasses] = useState<Class[]>([]);
-  const [selectedClass, setSelectedClass] = useState<string>("");
+  const [selectedClass, setSelectedClass] = useState<string>(
+    searchParams.get('classId') || ""
+  );
   const [date, setDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
+    searchParams.get('date') || new Date().toISOString().split("T")[0]
   );
   const [absentees, setAbsentees] = useState<AbsenteeRecord[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -25,22 +30,32 @@ const AbsenteeReport = () => {
     const fetchClasses = async () => {
       try {
         const response = await fetch(`${API_URL}/api/classes`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch classes');
+        }
         const data = await response.json();
         setClasses(data);
       } catch (error) {
         console.error('Error fetching classes:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch classes. Please try again.",
+          variant: "destructive"
+        });
       }
     };
     fetchClasses();
   }, []);
   
   // Update fetchAbsentees to use real API
+  const { toast } = useToast();
+
   const fetchAbsentees = async () => {
     if (!selectedClass || !date) return;
-  
+
     setIsLoading(true);
     setHasSearched(true);
-  
+
     try {
       const response = await fetch(
         `${API_URL}/api/attendance/absentees?classId=${selectedClass}&date=${date}`
@@ -54,10 +69,22 @@ const AbsenteeReport = () => {
       setAbsentees(data);
     } catch (error) {
       console.error('Error fetching absentees:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch absentee report. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Automatically fetch absentees when navigated from MarkAttendance
+  useEffect(() => {
+    if (searchParams.get('classId') && searchParams.get('date')) {
+      fetchAbsentees();
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50">
